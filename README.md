@@ -1,21 +1,7 @@
-<!--
-  🎀 COMO COLOCAR AS IMAGENS (só uma vez, leva 1 minuto) 🎀
-
-  Este README é um arquivo único: não depende de nenhuma pasta.
-  As 3 imagens ficam hospedadas pelo próprio GitHub:
-
-  1. No GitHub, abra este README.md e clique no lápis (Edit).
-  2. Procure as linhas que começam com  🖼️ ARRASTE AQUI  (são 3).
-  3. Clique no fim da linha e arraste o arquivo de imagem indicado
-     para dentro do editor. O GitHub sobe a imagem e escreve o link sozinho.
-  4. Clique em "Commit changes".
-
-  Estes comentários ficam invisíveis na página, pode deixar ou apagar.
--->
 
 <div align="center">
+<img width="2400" height="760" alt="banner" src="https://github.com/user-attachments/assets/105b0b94-1306-408b-bcb0-6afebc00ec68" />
 
-<!-- 🖼️ ARRASTE AQUI: banner.png -->
 
 <br><br>
 
@@ -58,13 +44,12 @@ Este repositório guarda o **protótipo desktop** do sistema, feito em Java Swin
 
 <div align="center">
 
-<!-- 🖼️ ARRASTE AQUI: tela-artistas.png -->
+<img width="1880" height="1276" alt="tela-artistas" src="https://github.com/user-attachments/assets/a7a3c750-28ba-415d-935a-cb35c9d69794" />
 
 <sub>♡ gerenciar artistas ♡</sub>
 
 <br><br>
-
-<!-- 🖼️ ARRASTE AQUI: tela-eventos.png -->
+<img width="2120" height="1356" alt="tela-eventos" src="https://github.com/user-attachments/assets/5f1a9e5d-ac7b-42f3-9877-4996b049cc11" />
 
 <sub>♡ eventos e exposições: agendado, em andamento, encerrado ou cancelado ♡</sub>
 
