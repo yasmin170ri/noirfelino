@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * Sistema Noir Felino
@@ -14,9 +16,9 @@ public class MenuPrincipal extends JFrame {
     public MenuPrincipal() {
         super("Noir Felino - Menu Principal");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(400, 250);
+        setSize(420, 280);
         setLocationRelativeTo(null);
-        setLayout(new GridLayout(3, 1, 10, 10));
+        setLayout(new GridLayout(4, 1, 10, 10));
 
         JLabel titulo = new JLabel("Sistema Noir Felino", SwingConstants.CENTER);
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
@@ -27,9 +29,24 @@ public class MenuPrincipal extends JFrame {
         btnArtistas.addActionListener(e -> new TelaArtistas().setVisible(true));
         btnEventos.addActionListener(e -> new TelaEventos().setVisible(true));
 
+        JLabel status = new JLabel(verificarBanco(), SwingConstants.CENTER);
+        status.setFont(new Font("SansSerif", Font.PLAIN, 11));
+
         add(titulo);
         add(btnArtistas);
         add(btnEventos);
+        add(status);
+    }
+
+    /** Abre o banco uma vez ao iniciar (cria o arquivo e as tabelas se preciso). */
+    private String verificarBanco() {
+        try (Connection con = Conexao.getConexao()) {
+            String versao = con.getMetaData().getDatabaseProductVersion();
+            return "Banco de dados: SQLite " + versao + " (noirfelino.db) conectado";
+        } catch (SQLException ex) {
+            Mensagens.erroBanco(this, ex);
+            return "Banco de dados: ERRO na conexão";
+        }
     }
 
     public static void main(String[] args) {

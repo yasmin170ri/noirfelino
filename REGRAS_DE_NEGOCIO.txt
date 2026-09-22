@@ -1,0 +1,110 @@
+SISTEMA NOIR FELINO - REGRAS DE NEGÓCIO (proposta para a seção 3.1.9)
+=====================================================================
+
+ATENÇÃO: a tabela 3.1.9 atual do documento (RN01 a RN21) veio do modelo
+de outro sistema (funerária PAX Domini: associados, FUMDEC, urnas,
+ordem de serviço...). Ela não tem relação com o Noir Felino e deve ser
+substituída pela tabela abaixo. As mesmas partes do documento também
+precisam de revisão: 3.1.1.3 (problemas), 3.1.1.4 (missão),
+3.1.2 a 3.1.6 e o Glossário, que também falam da funerária.
+
+As regras abaixo foram tiradas do que o próprio documento define para
+o Noir Felino (RF02, RF03, RF08, RF09, RF12, RF15, RF19, RNF07,
+RNF13-RNF17 e as fichas CSU02, CSU03 e CSU07) e estão implementadas
+no protótipo.
+
+---------------------------------------------------------------------
+ARTISTAS (CSU02)
+---------------------------------------------------------------------
+RN01 - Dados do artista
+       O nome do artista é obrigatório e deve ter entre 2 e 100
+       caracteres. A especialidade é opcional (máx. 60 caracteres) e
+       a biografia é opcional (máx. 1000 caracteres). Espaços extras
+       no nome são removidos automaticamente.
+       RF: RF02 | Código: ControleArtista.validarCampos()
+
+RN02 - Nome de artista único
+       Não podem existir dois artistas com o mesmo nome, sem
+       diferenciar maiúsculas de minúsculas (ex.: "Ana Kurotori" e
+       "ANA KUROTORI" são o mesmo artista).
+       RF: RF02 | RNF: RNF16 | Código: ControleArtista.validarNomeUnico()
+       + índice único ux_artista_nome no banco
+
+RN03 - Artista com obras não pode ser excluído
+       Um artista que possui obras associadas não pode ser excluído.
+       As obras devem ser excluídas ou transferidas antes.
+       RF: RF07, RF08 | RNF: RNF17 | Código: ControleArtista.excluir()
+       + chave estrangeira obra.artista_id (ON DELETE RESTRICT)
+
+---------------------------------------------------------------------
+EVENTOS E EXPOSIÇÕES (CSU03 / CSU08)
+---------------------------------------------------------------------
+RN04 - Dados do evento
+       São obrigatórios: nome (3 a 100 caracteres), data de início,
+       data de término e local (máx. 100 caracteres). A descrição é
+       opcional (máx. 1000 caracteres).
+       RF: RF03, RF09 | Código: ControleEvento.montarEValidar()
+
+RN05 - Datas válidas
+       As datas devem ser informadas no formato dd/mm/aaaa e precisam
+       existir no calendário (ex.: 31/02/2027 é recusada).
+       RF: RF03, RF09 | Código: ControleEvento.montarEValidar()
+
+RN06 - Período coerente
+       A data de término não pode ser anterior à data de início.
+       Um evento de um dia só tem início e término iguais.
+       RF: RF09 | Código: ControleEvento.montarEValidar()
+       + CHECK (data_fim >= data_inicio) no banco
+
+RN07 - Início não pode estar no passado
+       Não é permitido cadastrar um evento com data de início anterior
+       à data atual. Na edição, a regra só vale se a data de início
+       for alterada.
+       RF: RF03, RF09, RF19 | Código: ControleEvento.cadastrar() / editar()
+
+RN08 - Evento duplicado
+       Não podem existir dois eventos ativos com o mesmo nome e a
+       mesma data de início. Eventos cancelados não entram na
+       comparação.
+       RNF: RNF16 | Código: ControleEvento.validarDuplicado()
+
+RN09 - Cancelar não exclui
+       Ao cancelar um evento, ele não é apagado: sua situação passa a
+       ser "Cancelado" e ele continua no histórico, para que possa
+       aparecer nos relatórios de exposições por período.
+       RF: RF12, RF19 | Código: ControleEvento.cancelar() / EventoDAO.cancelar()
+       + CHECK (status IN ('ATIVO','CANCELADO')) no banco
+
+RN10 - Evento cancelado ou encerrado não pode ser alterado
+       Eventos com situação "Cancelado" ou já encerrados (data de
+       término anterior a hoje) não podem ser editados nem cancelados.
+       Situações possíveis: Agendado, Em andamento, Encerrado, Cancelado.
+       RF: RF19 | Código: ControleEvento.validarPodeAlterar()
+
+---------------------------------------------------------------------
+GERAIS
+---------------------------------------------------------------------
+RN11 - Confirmação de exclusão e cancelamento
+       Toda exclusão ou cancelamento só é executado depois que o
+       usuário confirmar a ação.
+       RF: RF07, RF19 | CSU07 (passo 4) | Código: TelaArtistas.excluirArtista(),
+       TelaEventos.cancelarEvento()
+
+RN12 - Registro de responsável e data
+       Todo cadastro ou alteração registra a data/hora e o usuário
+       responsável. Enquanto o login não existe, é usado o usuário do
+       computador (classe Sessao).
+       RF: RF15 | RNF: RNF15 | Código: colunas data_cadastro,
+       data_alteracao e usuario_responsavel em todas as tabelas
+
+---------------------------------------------------------------------
+Sugestão para as fichas de caso de uso (campo "Regras de Negócio"):
+  CSU02 Gerenciar Artistas ............ RN01, RN02, RN03, RN11, RN12
+  CSU03 Cadastrar e Gerenciar Eventos . RN04, RN05, RN06, RN07, RN08,
+                                        RN09, RN10, RN11, RN12
+  CSU07 Administrar Conteúdos ......... RN03, RN11, RN12
+  CSU08 Gerenciar Exposições .......... RN04 a RN11
+  (As fichas CSU07, CSU09 e CSU10 hoje citam RNF13, RNF04 etc. no
+  campo de regras de negócio; RNF é requisito não funcional, não RN.)
+
+Seção 4.7.2 do documento: trocar "MySQL" por "SQLite".

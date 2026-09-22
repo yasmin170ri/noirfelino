@@ -1,17 +1,29 @@
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 /**
  * Sistema Noir Felino
- * Classe de domínio que representa um Evento/Exposição temática.
+ * Classe de entidade que representa um Evento/Exposição temática.
  */
 public class Evento {
 
+    public static final String STATUS_ATIVO = "ATIVO";
+    public static final String STATUS_CANCELADO = "CANCELADO";
+
     private int id;
     private String nome;
-    private String dataInicio; // formato dd/MM/aaaa
-    private String dataFim;    // formato dd/MM/aaaa
+    private LocalDate dataInicio;
+    private LocalDate dataFim;
     private String local;
     private String descricao;
+    private String status = STATUS_ATIVO; // RN09: cancelar muda o status, não exclui
 
-    public Evento(int id, String nome, String dataInicio, String dataFim, String local, String descricao) {
+    // Preenchidos pelo banco (somente leitura na tela)
+    private LocalDateTime dataAlteracao;  // RN12
+    private String usuarioResponsavel;    // RN12
+
+    public Evento(int id, String nome, LocalDate dataInicio, LocalDate dataFim,
+                  String local, String descricao) {
         this.id = id;
         this.nome = nome;
         this.dataInicio = dataInicio;
@@ -19,6 +31,28 @@ public class Evento {
         this.local = local;
         this.descricao = descricao;
     }
+
+    // ---------------- Situação do evento ----------------
+
+    public boolean isCancelado() {
+        return STATUS_CANCELADO.equals(status);
+    }
+
+    /** Encerrado = a data de término já passou. */
+    public boolean isEncerrado() {
+        return dataFim != null && dataFim.isBefore(LocalDate.now());
+    }
+
+    /** Texto exibido na coluna "Situação" da tabela. */
+    public String getSituacao() {
+        if (isCancelado()) return "Cancelado";
+        LocalDate hoje = LocalDate.now();
+        if (dataInicio.isAfter(hoje)) return "Agendado";
+        if (isEncerrado()) return "Encerrado";
+        return "Em andamento";
+    }
+
+    // ---------------- Getters e setters ----------------
 
     public int getId() {
         return id;
@@ -36,19 +70,19 @@ public class Evento {
         this.nome = nome;
     }
 
-    public String getDataInicio() {
+    public LocalDate getDataInicio() {
         return dataInicio;
     }
 
-    public void setDataInicio(String dataInicio) {
+    public void setDataInicio(LocalDate dataInicio) {
         this.dataInicio = dataInicio;
     }
 
-    public String getDataFim() {
+    public LocalDate getDataFim() {
         return dataFim;
     }
 
-    public void setDataFim(String dataFim) {
+    public void setDataFim(LocalDate dataFim) {
         this.dataFim = dataFim;
     }
 
@@ -66,5 +100,29 @@ public class Evento {
 
     public void setDescricao(String descricao) {
         this.descricao = descricao;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getDataAlteracao() {
+        return dataAlteracao;
+    }
+
+    public void setDataAlteracao(LocalDateTime dataAlteracao) {
+        this.dataAlteracao = dataAlteracao;
+    }
+
+    public String getUsuarioResponsavel() {
+        return usuarioResponsavel;
+    }
+
+    public void setUsuarioResponsavel(String usuarioResponsavel) {
+        this.usuarioResponsavel = usuarioResponsavel;
     }
 }

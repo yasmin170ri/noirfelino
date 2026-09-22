@@ -1,7 +1,9 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,17 +11,17 @@ import java.util.List;
  * Sistema Noir Felino
  * CSU03 - Cadastrar e Gerenciar Eventos Temáticos
  *
- * Protótipo de tela Java Swing para o caso de uso "Cadastrar e Gerenciar
- * Eventos Temáticos". Mantém uma lista em memória (sem banco de dados)
- * apenas para demonstrar o fluxo de cadastro / edição / cancelamento.
+ * Classe de fronteira (tela). Os dados agora são gravados no banco
+ * SQLite através do ControleEvento, que aplica as regras de negócio.
  */
 public class TelaEventos extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-    // ---- "Banco" em memória ----
-    private final List<Evento> eventos = new ArrayList<>();
-    private int proximoId = 1;
+    private static final int COLUNA_SITUACAO = 5;
+
+    private final ControleEvento controle = new ControleEvento();
+    private List<Evento> eventos = new ArrayList<>(); // última lista lida do banco
     private int idSelecionado = -1; // -1 = nenhum evento selecionado (modo cadastro)
 
     // ---- Componentes de formulário ----
@@ -42,13 +44,12 @@ public class TelaEventos extends JFrame {
     public TelaEventos() {
         super("Noir Felino - Cadastrar e Gerenciar Eventos Temáticos");
         montarTela();
-        carregarDadosExemplo();
         atualizarTabela();
     }
 
     private void montarTela() {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(820, 560);
+        setSize(980, 580);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
 
@@ -59,7 +60,7 @@ public class TelaEventos extends JFrame {
 
     private JPanel criarPainelFormulario() {
         JPanel painel = new JPanel(new GridBagLayout());
-        painel.setBorder(BorderFactory.createTitledBorder("Dados do Evento / Exposição"));
+        painel.setBorder(BorderFactory.createTitledBorder("Dados do Evento / Exposição   (* obrigatório)"));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
@@ -67,7 +68,7 @@ public class TelaEventos extends JFrame {
 
         // Nome do evento
         gbc.gridx = 0; gbc.gridy = 0;
-        painel.add(new JLabel("Nome do evento:"), gbc);
+        painel.add(new JLabel("Nome do evento: *"), gbc);
         gbc.gridx = 1; gbc.gridwidth = 3; gbc.weightx = 1;
         txtNome = new JTextField();
         painel.add(txtNome, gbc);
@@ -75,20 +76,20 @@ public class TelaEventos extends JFrame {
 
         // Data início / fim
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
-        painel.add(new JLabel("Data início (dd/mm/aaaa):"), gbc);
+        painel.add(new JLabel("Data início (dd/mm/aaaa): *"), gbc);
         gbc.gridx = 1; gbc.weightx = 1;
         txtDataInicio = new JTextField();
         painel.add(txtDataInicio, gbc);
 
         gbc.gridx = 2; gbc.weightx = 0;
-        painel.add(new JLabel("Data fim (dd/mm/aaaa):"), gbc);
+        painel.add(new JLabel("Data fim (dd/mm/aaaa): *"), gbc);
         gbc.gridx = 3; gbc.weightx = 1;
         txtDataFim = new JTextField();
         painel.add(txtDataFim, gbc);
 
         // Local
         gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
-        painel.add(new JLabel("Local:"), gbc);
+        painel.add(new JLabel("Local: *"), gbc);
         gbc.gridx = 1; gbc.gridwidth = 3; gbc.weightx = 1;
         txtLocal = new JTextField();
         painel.add(txtLocal, gbc);
@@ -109,7 +110,7 @@ public class TelaEventos extends JFrame {
     }
 
     private JScrollPane criarPainelTabela() {
-        String[] colunas = {"ID", "Nome", "Início", "Fim", "Local", "Descrição"};
+        String[] colunas = {"ID", "Nome", "Início", "Fim", "Local", "Situação", "Descrição", "Última alteração"};
         modeloTabela = new DefaultTableModel(colunas, 0) {
             private static final long serialVersionUID = 1L;
             @Override
@@ -118,7 +119,13 @@ public class TelaEventos extends JFrame {
             }
         };
         tabela = new JTable(modeloTabela);
-        tabela.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        tabela.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tabela.getColumnModel().getColumn(0).setMaxWidth(45);
+        tabela.getColumnModel().getColumn(1).setPreferredWidth(200);
+        tabela.getColumnModel().getColumn(2).setPreferredWidth(80);
+        tabela.getColumnModel().getColumn(3).setPreferredWidth(80);
+        tabela.getColumnModel().getColumn(7).setPreferredWidth(170);
+        tabela.getColumnModel().getColumn(COLUNA_SITUACAO).setCellRenderer(new RenderizadorSituacao());
         tabela.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 carregarSelecaoNoFormulario();
@@ -153,78 +160,71 @@ public class TelaEventos extends JFrame {
     // ---------------- Ações CRUD ----------------
 
     private void cadastrarEvento(ActionEvent e) {
-        if (!validarCampos()) return;
-
-        Evento evento = new Evento(
-                proximoId++,
-                txtNome.getText().trim(),
-                txtDataInicio.getText().trim(),
-                txtDataFim.getText().trim(),
-                txtLocal.getText().trim(),
-                txtDescricao.getText().trim()
-        );
-        eventos.add(evento);
-        atualizarTabela();
-        limparFormulario();
-        JOptionPane.showMessageDialog(this, "Evento cadastrado com sucesso!",
-                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            controle.cadastrar(
+                    txtNome.getText(),
+                    txtDataInicio.getText(),
+                    txtDataFim.getText(),
+                    txtLocal.getText(),
+                    txtDescricao.getText());
+            atualizarTabela();
+            limparFormulario();
+            Mensagens.sucesso(this, "Evento cadastrado com sucesso!");
+        } catch (RegraNegocioException ex) {
+            Mensagens.regra(this, ex);
+        } catch (SQLException ex) {
+            Mensagens.erroBanco(this, ex);
+        }
     }
 
     private void editarEvento(ActionEvent e) {
         if (idSelecionado == -1) {
-            JOptionPane.showMessageDialog(this, "Selecione um evento na tabela para editar.",
-                    "Atenção", JOptionPane.WARNING_MESSAGE);
+            Mensagens.atencao(this, "Selecione um evento na tabela para editar.");
             return;
         }
-        if (!validarCampos()) return;
-
-        for (Evento ev : eventos) {
-            if (ev.getId() == idSelecionado) {
-                ev.setNome(txtNome.getText().trim());
-                ev.setDataInicio(txtDataInicio.getText().trim());
-                ev.setDataFim(txtDataFim.getText().trim());
-                ev.setLocal(txtLocal.getText().trim());
-                ev.setDescricao(txtDescricao.getText().trim());
-                break;
-            }
+        try {
+            controle.editar(
+                    idSelecionado,
+                    txtNome.getText(),
+                    txtDataInicio.getText(),
+                    txtDataFim.getText(),
+                    txtLocal.getText(),
+                    txtDescricao.getText());
+            atualizarTabela();
+            limparFormulario();
+            Mensagens.sucesso(this, "Evento atualizado com sucesso!");
+        } catch (RegraNegocioException ex) {
+            Mensagens.regra(this, ex);
+        } catch (SQLException ex) {
+            Mensagens.erroBanco(this, ex);
         }
-        atualizarTabela();
-        limparFormulario();
-        JOptionPane.showMessageDialog(this, "Evento atualizado com sucesso!",
-                "Sucesso", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void cancelarEvento(ActionEvent e) {
         if (idSelecionado == -1) {
-            JOptionPane.showMessageDialog(this, "Selecione um evento na tabela para cancelar.",
-                    "Atenção", JOptionPane.WARNING_MESSAGE);
+            Mensagens.atencao(this, "Selecione um evento na tabela para cancelar.");
             return;
         }
-        int confirmacao = JOptionPane.showConfirmDialog(this,
-                "Tem certeza que deseja cancelar este evento?",
-                "Confirmar cancelamento", JOptionPane.YES_NO_OPTION);
-        if (confirmacao == JOptionPane.YES_OPTION) {
-            eventos.removeIf(ev -> ev.getId() == idSelecionado);
+        // RN11 - cancelamento exige confirmação
+        if (!Mensagens.confirmar(this,
+                "Tem certeza que deseja cancelar este evento?\n"
+              + "Ele continuará no histórico com a situação \"Cancelado\".",
+                "Confirmar cancelamento")) {
+            return;
+        }
+        try {
+            controle.cancelar(idSelecionado); // RN09: não exclui, só muda o status
             atualizarTabela();
             limparFormulario();
+            Mensagens.sucesso(this, "Evento cancelado.");
+        } catch (RegraNegocioException ex) {
+            Mensagens.regra(this, ex);
+        } catch (SQLException ex) {
+            Mensagens.erroBanco(this, ex);
         }
     }
 
     // ---------------- Auxiliares ----------------
-
-    private boolean validarCampos() {
-        if (txtNome.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "O campo Nome do evento é obrigatório.",
-                    "Campo obrigatório", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        if (txtDataInicio.getText().trim().isEmpty() || txtDataFim.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Informe a data de início e de término do evento.",
-                    "Campo obrigatório", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        return true;
-    }
 
     private void limparFormulario() {
         txtNome.setText("");
@@ -244,8 +244,8 @@ public class TelaEventos extends JFrame {
         for (Evento ev : eventos) {
             if (ev.getId() == idSelecionado) {
                 txtNome.setText(ev.getNome());
-                txtDataInicio.setText(ev.getDataInicio());
-                txtDataFim.setText(ev.getDataFim());
+                txtDataInicio.setText(Datas.formatarBR(ev.getDataInicio()));
+                txtDataFim.setText(Datas.formatarBR(ev.getDataFim()));
                 txtLocal.setText(ev.getLocal());
                 txtDescricao.setText(ev.getDescricao());
                 break;
@@ -254,20 +254,46 @@ public class TelaEventos extends JFrame {
     }
 
     private void atualizarTabela() {
+        try {
+            eventos = controle.listar();
+        } catch (SQLException ex) {
+            Mensagens.erroBanco(this, ex);
+            return;
+        }
         modeloTabela.setRowCount(0);
         for (Evento ev : eventos) {
             modeloTabela.addRow(new Object[]{
-                    ev.getId(), ev.getNome(), ev.getDataInicio(), ev.getDataFim(),
-                    ev.getLocal(), ev.getDescricao()
+                    ev.getId(),
+                    ev.getNome(),
+                    Datas.formatarBR(ev.getDataInicio()),
+                    Datas.formatarBR(ev.getDataFim()),
+                    ev.getLocal(),
+                    ev.getSituacao(),
+                    ev.getDescricao(),
+                    Datas.formatarBR(ev.getDataAlteracao()) + " (" + ev.getUsuarioResponsavel() + ")"
             });
         }
     }
 
-    private void carregarDadosExemplo() {
-        eventos.add(new Evento(proximoId++, "Exposição Gatos Pretos na Arte",
-                "10/09/2026", "20/09/2026", "Galeria Municipal", "Mostra de pinturas e fotografias sobre gatos pretos."));
-        eventos.add(new Evento(proximoId++, "Feira Noir Felino",
-                "05/10/2026", "06/10/2026", "Centro Cultural", "Encontro de artistas e amantes de gatos pretos."));
+    /** Pinta a coluna "Situação" com uma cor por status (feedback visual - RNF07). */
+    private static class RenderizadorSituacao extends DefaultTableCellRenderer {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (!isSelected) {
+                String situacao = String.valueOf(value);
+                switch (situacao) {
+                    case "Cancelado":    c.setForeground(new Color(180, 30, 30)); break;
+                    case "Encerrado":    c.setForeground(Color.GRAY); break;
+                    case "Em andamento": c.setForeground(new Color(20, 120, 40)); break;
+                    default:             c.setForeground(new Color(30, 70, 160)); break;
+                }
+            }
+            return c;
+        }
     }
 
     // Permite testar esta tela isoladamente

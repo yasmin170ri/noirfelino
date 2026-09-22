@@ -1,6 +1,8 @@
+import java.time.LocalDateTime;
+
 /**
  * Sistema Noir Felino
- * Classe de domínio que representa um Artista cadastrado no sistema.
+ * Classe de entidade que representa um Artista cadastrado no sistema.
  */
 public class Artista {
 
@@ -8,6 +10,11 @@ public class Artista {
     private String nome;
     private String biografia;
     private String especialidade; // ex: Pintura, Fotografia, Ilustração digital...
+
+    // Preenchidos pelo banco (somente leitura na tela)
+    private int quantidadeObras;              // usado na RN03
+    private LocalDateTime dataAlteracao;      // RN12
+    private String usuarioResponsavel;        // RN12
 
     public Artista(int id, String nome, String biografia, String especialidade) {
         this.id = id;
@@ -46,5 +53,29 @@ public class Artista {
 
     public void setEspecialidade(String especialidade) {
         this.especialidade = especialidade;
+    }
+
+    public int getQuantidadeObras() {
+        return quantidadeObras;
+    }
+
+    public void setQuantidadeObras(int quantidadeObras) {
+        this.quantidadeObras = quantidadeObras;
+    }
+
+    public LocalDateTime getDataAlteracao() {
+        return dataAlteracao;
+    }
+
+    public void setDataAlteracao(LocalDateTime dataAlteracao) {
+        this.dataAlteracao = dataAlteracao;
+    }
+
+    public String getUsuarioResponsavel() {
+        return usuarioResponsavel;
+    }
+
+    public void setUsuarioResponsavel(String usuarioResponsavel) {
+        this.usuarioResponsavel = usuarioResponsavel;
     }
 }
