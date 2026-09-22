@@ -6,8 +6,9 @@ import java.sql.SQLException;
 /**
  * Sistema Noir Felino
  * Tela inicial simples para navegar entre os protótipos.
- * Basta rodar esta classe (Run As > Java Application no Eclipse)
- * para abrir o menu e, a partir dele, as telas de Artistas e Eventos.
+ * Basta rodar esta classe (Run As > Java Application no Eclipse):
+ * abre primeiro a tela de Login e, depois de entrar, este menu
+ * com as telas de Artistas e Eventos.
  */
 public class MenuPrincipal extends JFrame {
 
@@ -49,7 +50,8 @@ public class MenuPrincipal extends JFrame {
         }
     }
 
+    /** O sistema começa pela tela de login. */
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MenuPrincipal().setVisible(true));
+        SwingUtilities.invokeLater(() -> new Login().setVisible(true));
     }
 }

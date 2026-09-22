@@ -92,10 +92,30 @@ RN11 - Confirmação de exclusão e cancelamento
 
 RN12 - Registro de responsável e data
        Todo cadastro ou alteração registra a data/hora e o usuário
-       responsável. Enquanto o login não existe, é usado o usuário do
-       computador (classe Sessao).
+       responsável. O responsável é o usuário que entrou pela tela de
+       login (classe Sessao).
        RF: RF15 | RNF: RNF15 | Código: colunas data_cadastro,
        data_alteracao e usuario_responsavel em todas as tabelas
+
+---------------------------------------------------------------------
+USUÁRIOS (login e cadastro)
+---------------------------------------------------------------------
+RN13 - Dados do usuário
+       São obrigatórios: nome completo (2 a 100 caracteres), nome de
+       usuário (3 a 30 caracteres, só letras sem acento, números,
+       ponto, hífen ou sublinhado), e-mail válido e senha (mínimo 6
+       caracteres), que deve ser digitada duas vezes igual. Data de
+       nascimento e país são opcionais; se informada, a data precisa
+       existir e não pode estar no futuro. É preciso aceitar os Termos
+       de Uso. Contas criadas pela tela são sempre do tipo Usuário.
+       A senha é guardada como hash (SHA-256 + sal), nunca em texto.
+       Código: ControleUsuario.cadastrar()
+
+RN14 - Login e e-mail únicos
+       Não podem existir dois usuários com o mesmo nome de usuário
+       nem com o mesmo e-mail, sem diferenciar maiúsculas.
+       RNF: RNF16 | Código: ControleUsuario.cadastrar()
+       + índices únicos ux_usuario_login e ux_usuario_email no banco
 
 ---------------------------------------------------------------------
 Sugestão para as fichas de caso de uso (campo "Regras de Negócio"):

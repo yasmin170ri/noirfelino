@@ -29,10 +29,12 @@ Este repositório guarda o **protótipo desktop** do sistema, feito em Java Swin
 
 | | funcionalidade | detalhes |
 |:---:|---|---|
+| 🔐 | **Login** | usuário, senha e tipo de acesso conferidos no banco; a senha fica guardada com hash |
+| 🐾 | **Criar conta** | cadastro de novos usuários direto na tela de login, com as regras RN13 e RN14 |
 | 🎨 | **Gerenciar artistas** <sub>(CSU02)</sub> | cadastrar, editar e excluir artistas, vendo quantas obras cada um tem |
 | 🗓️ | **Eventos temáticos** <sub>(CSU03)</sub> | cadastrar, editar e cancelar eventos e exposições, com a situação colorida na tabela |
 | 🗃️ | **Banco SQLite** | um único arquivo, criado sozinho na primeira execução, já com dados de exemplo |
-| 📜 | **12 regras de negócio** | cada regra quebrada mostra uma mensagem com o código dela (ex.: *RN06*) |
+| 📜 | **14 regras de negócio** | cada regra quebrada mostra uma mensagem com o código dela (ex.: *RN06*) |
 | 🕰️ | **Registro de alterações** | todo cadastro ou edição guarda quem fez e quando |
 
 > [!TIP]
@@ -65,6 +67,13 @@ Este repositório guarda o **protótipo desktop** do sistema, feito em Java Swin
 2. No Eclipse, vá em **File › Import › General › Existing Projects into Workspace**.
 3. Escolha a pasta do projeto e clique em **Finish**.
 4. Clique com o botão direito em `MenuPrincipal.java` › **Run As › Java Application**. 🐾
+
+O sistema abre na **tela de login**. Dá para criar uma conta nova pelo botão **Criar conta** (contas criadas assim são sempre do tipo *Usuário*) ou usar os que já vêm no banco:
+
+| usuário | senha | tipo de acesso |
+|---|---|---|
+| `admin` | `1234` | Administrador |
+| `usuario` | `1234` | Usuário |
 
 Na primeira execução o arquivo `noirfelino.db` aparece na pasta do projeto (aperte <kbd>F5</kbd> no Eclipse para vê-lo).
 
@@ -145,6 +154,20 @@ erDiagram
         text data_alteracao
         text usuario_responsavel
     }
+    USUARIO {
+        int id PK
+        text nome
+        text login UK
+        text email UK
+        text data_nascimento
+        text pais
+        text senha_hash
+        text senha_sal
+        text tipo "USUARIO ou ADMINISTRADOR"
+        text data_cadastro
+        text data_alteracao
+        text usuario_responsavel
+    }
     EVENTO {
         int id PK
         text nome
@@ -166,7 +189,7 @@ erDiagram
 ## 📜 regras de negócio
 
 <details>
-<summary><b>♡ ver as 12 regras ♡</b></summary>
+<summary><b>♡ ver as 14 regras ♡</b></summary>
 
 <br>
 
@@ -184,6 +207,8 @@ erDiagram
 | **RN10** | Evento cancelado ou encerrado não pode ser editado nem cancelado | eventos |
 | **RN11** | Excluir ou cancelar sempre pede confirmação | geral |
 | **RN12** | Todo cadastro ou alteração registra data, hora e usuário responsável | geral |
+| **RN13** | Nome, usuário, e-mail e senha são obrigatórios; senha com 6+ caracteres e confirmada; aceitar os termos | usuários |
+| **RN14** | Não podem existir dois usuários com o mesmo login ou o mesmo e-mail | usuários |
 
 A descrição completa, com os requisitos relacionados, está em [`REGRAS_DE_NEGOCIO.txt`](REGRAS_DE_NEGOCIO.txt).
 
@@ -204,7 +229,8 @@ A descrição completa, com os requisitos relacionados, está em [`REGRAS_DE_NEG
 - [ ] Gerenciar exposições artísticas <sub>(CSU08)</sub>
 - [ ] Relatórios de obras e exposições <sub>(CSU09)</sub>
 - [ ] Favoritar e avaliar obras <sub>(CSU10)</sub>
-- [ ] Tela de login
+- [x] Tela de login
+- [x] Cadastro de usuários
 
 <p align="center">⋆｡‧˚ʚ 🎀 ɞ˚‧｡⋆</p>
 
@@ -213,15 +239,21 @@ A descrição completa, com os requisitos relacionados, está em [`REGRAS_DE_NEG
 ```
 NoirFelinoPrototipo/
 ├── 🎀 src/
+│   ├── Login.java                tela de login · fronteira
+│   ├── CadastroUsuario.java      tela "Criar conta" · fronteira
 │   ├── MenuPrincipal.java        tela inicial
 │   ├── TelaArtistas.java         CSU02 · fronteira
 │   ├── TelaEventos.java          CSU03 · fronteira
 │   ├── ControleArtista.java      regras RN01–RN03
 │   ├── ControleEvento.java       regras RN04–RN10
+│   ├── ControleUsuario.java      login + regras RN13–RN14
 │   ├── Artista.java              entidade
 │   ├── Evento.java               entidade
+│   ├── Usuario.java              entidade
 │   ├── ArtistaDAO.java           SQL de artistas
 │   ├── EventoDAO.java            SQL de eventos
+│   ├── UsuarioDAO.java           SQL de usuários
+│   ├── Senhas.java               hash das senhas (SHA-256 + sal)
 │   ├── Conexao.java              conexão SQLite + criação das tabelas
 │   ├── Datas.java                datas dd/mm/aaaa ⇄ banco
 │   ├── Sessao.java               usuário atual

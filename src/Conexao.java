@@ -21,7 +21,7 @@ public final class Conexao {
     private static final String URL = "jdbc:sqlite:" + ARQUIVO_BANCO;
 
     /** Versão da estrutura do banco. Aumente ao mudar as tabelas. */
-    private static final int VERSAO_ESTRUTURA = 1;
+    private static final int VERSAO_ESTRUTURA = 3;
 
     private static boolean estruturaVerificada = false;
 
@@ -83,6 +83,30 @@ public final class Conexao {
         con.setAutoCommit(false);
         try (Statement st = con.createStatement()) {
 
+            if (versaoAtual < 1) {
+                criarTabelasIniciais(con);   // artista, obra, evento
+            }
+            if (versaoAtual < 2) {
+                criarTabelaUsuario(con);     // login
+            }
+            if (versaoAtual < 3) {
+                ampliarTabelaUsuario(con);   // cadastro de usuários
+            }
+
+            st.execute("PRAGMA user_version = " + VERSAO_ESTRUTURA);
+            con.commit();
+        } catch (SQLException e) {
+            con.rollback();
+            throw e;
+        } finally {
+            con.setAutoCommit(true);
+        }
+    }
+
+    /** Versão 1: tabelas de artistas, obras e eventos. */
+    private static void criarTabelasIniciais(Connection con) throws SQLException {
+        try (Statement st = con.createStatement()) {
+
             st.execute(
                 "CREATE TABLE IF NOT EXISTS artista ("
               + "  id                  INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -135,14 +159,73 @@ public final class Conexao {
               + ")");
 
             inserirDadosExemplo(con);
+        }
+    }
 
-            st.execute("PRAGMA user_version = " + VERSAO_ESTRUTURA);
-            con.commit();
-        } catch (SQLException e) {
-            con.rollback();
-            throw e;
-        } finally {
-            con.setAutoCommit(true);
+    /**
+     * Versão 2: tabela de usuários do login.
+     * A senha é guardada como hash + sal (classe Senhas), nunca em texto puro.
+     */
+    private static void criarTabelaUsuario(Connection con) throws SQLException {
+        try (Statement st = con.createStatement()) {
+            st.execute(
+                "CREATE TABLE IF NOT EXISTS usuario ("
+              + "  id                  INTEGER PRIMARY KEY AUTOINCREMENT,"
+              + "  nome                TEXT    NOT NULL,"
+              + "  login               TEXT    NOT NULL,"
+              + "  senha_hash          TEXT    NOT NULL,"
+              + "  senha_sal           TEXT    NOT NULL,"
+              + "  tipo                TEXT    NOT NULL DEFAULT 'USUARIO'"
+              + "                      CHECK (tipo IN ('USUARIO', 'ADMINISTRADOR')),"
+              + "  data_cadastro       TEXT    NOT NULL,"   // RN12
+              + "  data_alteracao      TEXT    NOT NULL,"   // RN12
+              + "  usuario_responsavel TEXT    NOT NULL"    // RN12
+              + ")");
+
+            // Não permite dois logins iguais (sem diferenciar maiúsculas)
+            st.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_login "
+              + "ON usuario (lower(login))");
+        }
+
+        // Usuários iniciais (os mesmos do protótipo da tela de login)
+        inserirUsuario(con, "Administrador", "admin", "1234", "ADMINISTRADOR");
+        inserirUsuario(con, "Usuário Padrão", "usuario", "1234", "USUARIO");
+    }
+
+    /**
+     * Versão 3: campos da tela "Criar conta" (e-mail, nascimento e país).
+     * Usa ALTER TABLE para não perder quem já estava cadastrado.
+     */
+    private static void ampliarTabelaUsuario(Connection con) throws SQLException {
+        try (Statement st = con.createStatement()) {
+            st.execute("ALTER TABLE usuario ADD COLUMN email TEXT");
+            st.execute("ALTER TABLE usuario ADD COLUMN data_nascimento TEXT"); // aaaa-MM-dd
+            st.execute("ALTER TABLE usuario ADD COLUMN pais TEXT");
+
+            // RN14 - e-mail não pode se repetir (contas antigas ficam sem e-mail)
+            st.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_usuario_email "
+              + "ON usuario (lower(email)) WHERE email IS NOT NULL");
+        }
+    }
+
+    private static void inserirUsuario(Connection con, String nome, String login,
+                                       String senha, String tipo) throws SQLException {
+        String sql = "INSERT OR IGNORE INTO usuario (nome, login, senha_hash, senha_sal, tipo, "
+                + "data_cadastro, data_alteracao, usuario_responsavel) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String agora = Datas.agoraParaBanco();
+        String sal = Senhas.gerarSal();
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, nome);
+            ps.setString(2, login);
+            ps.setString(3, Senhas.gerarHash(senha, sal));
+            ps.setString(4, sal);
+            ps.setString(5, tipo);
+            ps.setString(6, agora);
+            ps.setString(7, agora);
+            ps.setString(8, "sistema");
+            ps.executeUpdate();
         }
     }
 
