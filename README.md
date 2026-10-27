@@ -66,7 +66,7 @@ Este repositório guarda o **protótipo desktop** do sistema, feito em Java Swin
 1. Baixe ou clone este repositório.
 2. No Eclipse, vá em **File › Import › General › Existing Projects into Workspace**.
 3. Escolha a pasta do projeto e clique em **Finish**.
-4. Clique com o botão direito em `MenuPrincipal.java` › **Run As › Java Application**. 🐾
+4. Clique com o botão direito em `src/app/Main.java` › **Run As › Java Application**. 🐾
 
 O sistema abre na **tela de login**. Dá para criar uma conta nova pelo botão **Criar conta** (contas criadas assim são sempre do tipo *Usuário*) ou usar os que já vêm no banco:
 
@@ -83,14 +83,14 @@ Na primeira execução o arquivo `noirfelino.db` aparece na pasta do projeto (ap
 <br>
 
 ```bash
-# compilar
-javac -encoding UTF-8 -cp lib/sqlite-jdbc-3.50.3.0.jar -d bin src/*.java
+# compilar (Linux / macOS)
+javac -encoding UTF-8 -cp lib/sqlite-jdbc-3.50.3.0.jar -d bin $(find src -name "*.java")
 
 # executar no Linux / macOS
-java -cp "bin:lib/sqlite-jdbc-3.50.3.0.jar" MenuPrincipal
+java -cp "bin:lib/sqlite-jdbc-3.50.3.0.jar" app.Main
 
-# executar no Windows
-java -cp "bin;lib/sqlite-jdbc-3.50.3.0.jar" MenuPrincipal
+# executar no Windows (compile pelo Eclipse antes)
+java -cp "bin;lib/sqlite-jdbc-3.50.3.0.jar" app.Main
 ```
 
 </details>
@@ -239,30 +239,40 @@ A descrição completa, com os requisitos relacionados, está em [`REGRAS_DE_NEG
 ```
 NoirFelinoPrototipo/
 ├── 🎀 src/
-│   ├── Login.java                tela de login · fronteira
-│   ├── CadastroUsuario.java      tela "Criar conta" · fronteira
-│   ├── MenuPrincipal.java        tela inicial
-│   ├── TelaArtistas.java         CSU02 · fronteira
-│   ├── TelaEventos.java          CSU03 · fronteira
-│   ├── ControleArtista.java      regras RN01–RN03
-│   ├── ControleEvento.java       regras RN04–RN10
-│   ├── ControleUsuario.java      login + regras RN13–RN14
-│   ├── Artista.java              entidade
-│   ├── Evento.java               entidade
-│   ├── Usuario.java              entidade
-│   ├── ArtistaDAO.java           SQL de artistas
-│   ├── EventoDAO.java            SQL de eventos
-│   ├── UsuarioDAO.java           SQL de usuários
-│   ├── Senhas.java               hash das senhas (SHA-256 + sal)
-│   ├── Conexao.java              conexão SQLite + criação das tabelas
-│   ├── Datas.java                datas dd/mm/aaaa ⇄ banco
-│   ├── Sessao.java               usuário atual
-│   ├── Mensagens.java            caixas de diálogo
-│   └── RegraNegocioException.java
+│   ├── app/
+│   │   └── Main.java                 ponto de entrada (abre o Login)
+│   ├── view/                         fronteira · telas Swing
+│   │   ├── Login.java                tela de login
+│   │   ├── CadastroUsuario.java      tela "Criar conta"
+│   │   ├── MenuPrincipal.java        tela inicial
+│   │   ├── TelaArtistas.java         CSU02
+│   │   ├── TelaEventos.java          CSU03
+│   │   └── Mensagens.java            caixas de diálogo
+│   ├── control/                      controle · regras de negócio
+│   │   ├── ControleArtista.java      regras RN01–RN03
+│   │   ├── ControleEvento.java       regras RN04–RN10
+│   │   ├── ControleUsuario.java      login + regras RN13–RN14
+│   │   ├── Sessao.java               usuário atual
+│   │   └── RegraNegocioException.java
+│   ├── model/                        entidades
+│   │   ├── Artista.java
+│   │   ├── Evento.java
+│   │   └── Usuario.java
+│   ├── dao/                          comandos SQL
+│   │   ├── Conexao.java              conexão SQLite + criação das tabelas
+│   │   ├── ArtistaDAO.java
+│   │   ├── EventoDAO.java
+│   │   └── UsuarioDAO.java
+│   └── util/
+│       ├── Datas.java                datas dd/mm/aaaa ⇄ banco
+│       └── Senhas.java               hash das senhas (SHA-256 + sal)
 ├── 🧶 lib/
-│   └── sqlite-jdbc-3.50.3.0.jar  driver do SQLite
+│   └── sqlite-jdbc-3.50.3.0.jar      driver do SQLite
+├── 🖼️ docs/                          imagens do README
 └── 📜 REGRAS_DE_NEGOCIO.txt
 ```
+
+As camadas só conversam em um sentido: **view → control → dao → banco**, e todas usam as entidades do `model`. Nenhuma tela acessa o banco direto.
 
 <p align="center">⋆｡‧˚ʚ 🎀 ɞ˚‧｡⋆</p>
 
